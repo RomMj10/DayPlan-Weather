@@ -31,7 +31,7 @@ function getSuggestions(req, res) {
       available_cities: weatherData.getCities()
     });
   }
-  
+
   res.json({
     city: city,
     period: selectedPeriod,
@@ -42,12 +42,39 @@ function getSuggestions(req, res) {
 function getRiskAssessment(req, res) {
   const {city} = req.query;
   if (!city || city.trim() === '') {
-    return res.status(400).json({
-      error: 'Bad Request',
-      message: 'City parameter is required',
-      code: 'MISSING_CITY'
+    const cities = weatherData.getCities();
+    const citiesWithRisks = cities.map(c => {
+      const weather = weatherData.getWeatherForActivities(c.city);
+      const risks = weather ? activityData.detectRisks(weather) : [];
+      return {
+        city: c.city,
+        country: c.country,
+        risks: risks
+      };
+    });
+    
+    return res.json({
+      cities: {
+        count: citiesWithRisks.length, 
+        list: citiesWithRisks
+      }
     });
   }
+  const weather = weatherData.getWeatherForActivities(city);
+  if (!weather) {
+    return res.status(404).json({
+      error: 'Not Found',
+      message: `Weather data not found for city: ${city}`,
+      code: 'CITY_NOT_FOUND',
+      available_cities: weatherData.getCities()
+    });
+  }
+  const risks = activityData.detectRisks(weather);
+  res.json({
+    city: city,
+    country: weather.current.location.country,
+    risks: risks
+  });
 }
 
 module.exports = {

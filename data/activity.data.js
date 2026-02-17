@@ -61,7 +61,7 @@ const RISK_THRESHOLDS = {
 
 function detectRisks(weather) {
     const risks = [];
-    const { temperature_c, uv_index, rain_probability, wind_kph, air_quality_index , condition} = weather;
+    const { temperature_c, uv_index, rain_probability, wind_kph, air_quality_index , condition} = weather.current;
 
     if (uv_index >= 8) {
     risks.push({
