@@ -61,7 +61,7 @@ const RISK_THRESHOLDS = {
 
 function detectRisks(weather) {
     const risks = [];
-    const { temperature_c, uv_index, rain_probability, wind_kph, air_quality_index } = weather;
+    const { temperature_c, uv_index, rain_probability, wind_kph, air_quality_index , condition} = weather;
 
     if (uv_index >= 8) {
     risks.push({
@@ -209,52 +209,52 @@ function generateRecommendations(weather, risks, period) {
   
   //outdoor recommendations
   if (hasThunderstorm || hasHeavyRain) {
-    recommendations.outdoors = ACTIVITY_SUGGESTIONS.outdoors.rainy;
+    recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.rainy;
   } else if (hasHeatRisk) {
     recommendations.outdoors = ['Early morning walk (before 8 AM)', 'Evening stroll (after 6 PM)', 'Shaded park activities'];
   } else if (hasColdRisk) {
-    recommendations.outdoors = ACTIVITY_SUGGESTIONS.outdoors.cold;
+    recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.cold;
   } else if (hasHighWind) {
-    recommendations.outdoors = ACTIVITY_SUGGESTIONS.outdoors.windy;
+    recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.windy;
   } else if (weather.condition.toLowerCase().includes('sunny')) {
     recommendations.outdoors = hasHighUV 
       ? ['Early morning walk', 'Late afternoon gardening', 'Evening outdoor sports']
       : ACTIVITY_SUGGESTIONS.outdoors.sunny;
   } else if (weather.condition.toLowerCase().includes('cloudy')) {
-    recommendations.outdoors = ACTIVITY_SUGGESTIONS.outdoors.cloudy;
+    recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.cloudy;
   } else {
     recommendations.outdoors = ['Walking', 'Light outdoor activities', 'Photography'];
   }
   
   //indoor recommendations
   if (hasHeatRisk) {
-    recommendations.indoors = [...ACTIVITY_SUGGESTIONS.indoors.hot, ...ACTIVITY_SUGGESTIONS.indoors.general.slice(0, 3)];
+    recommendations.indoors = [...ACTIVITY_RECOMMENDATIONS.indoors.hot, ...ACTIVITY_RECOMMENDATIONS.indoors.general.slice(0, 3)];
   } else if (hasColdRisk) {
-    recommendations.indoors = [...ACTIVITY_SUGGESTIONS.indoors.cold, ...ACTIVITY_SUGGESTIONS.indoors.general.slice(0, 3)];
+    recommendations.indoors = [...ACTIVITY_RECOMMENDATIONS.indoors.cold, ...ACTIVITY_RECOMMENDATIONS.indoors.general.slice(0, 3)];
   } else if (hasHeavyRain || hasThunderstorm) {
-    recommendations.indoors = [...ACTIVITY_SUGGESTIONS.indoors.rainy, ...ACTIVITY_SUGGESTIONS.indoors.general.slice(0, 2)];
+    recommendations.indoors = [...ACTIVITY_RECOMMENDATIONS.indoors.rainy, ...ACTIVITY_RECOMMENDATIONS.indoors.general.slice(0, 2)];
   } else {
-    recommendations.indoors = ACTIVITY_SUGGESTIONS.indoors.general;
+    recommendations.indoors = ACTIVITY_RECOMMENDATIONS.indoors.general;
   }
   
   //activities to avoid
   if (hasHighUV) {
-    recommendations.avoid.push(...ACTIVITY_SUGGESTIONS.avoid.high_uv);
+    recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.high_uv);
   }
   if (hasHeatRisk) {
-    recommendations.avoid.push(...ACTIVITY_SUGGESTIONS.avoid.heat_risk);
+    recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.heat_risk);
   }
   if (hasThunderstorm) {
-    recommendations.avoid.push(...ACTIVITY_SUGGESTIONS.avoid.thunderstorm);
+    recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.thunderstorm);
   }
   if (hasHeavyRain) {
-    recommendations.avoid.push(...ACTIVITY_SUGGESTIONS.avoid.heavy_rain);
+    recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.heavy_rain);
   }
   if (hasColdRisk) {
-    recommendations.avoid.push(...ACTIVITY_SUGGESTIONS.avoid.extreme_cold);
+    recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.extreme_cold);
   }
   if (hasHighWind) {
-    recommendations.avoid.push(...ACTIVITY_SUGGESTIONS.avoid.high_wind);
+    recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.high_wind);
   }
   
   
@@ -311,13 +311,13 @@ function generateSafetyNote(weather, risks, period) {
 }
 
 function getActivitySuggestions(city, period = 'all-day') {
-  const weatherData = weatherService.getWeatherForActivities(city, period);
+  const weatherSuggest = weatherData.getWeatherForActivities(city, period);
   
-  if (!weatherData) {
+  if (!weatherSuggest) {
     return null;
   }
   
-  const { current, forecast } = weatherData;
+  const { current, forecast } = weatherSuggest;
   
   const risks = detectRisks(current);
   

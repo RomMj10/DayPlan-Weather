@@ -1,6 +1,6 @@
 const { get } = require('http');
 const activityData = require('../data/activity.data');
-const weatherService = require('../data/weatherService');
+const weatherData = require('../data/weather.data');
 
 function getSuggestions(req, res) {
   const {city, period} = req.query;
@@ -21,6 +21,22 @@ function getSuggestions(req, res) {
       code: 'INVALID_PERIOD'
     });
   }
+  const suggestions = activityData.getActivitySuggestions(city, selectedPeriod);
+  
+  if (!suggestions) {
+    return res.status(404).json({
+      error: 'Not Found',
+      message: `No activity suggestions found for city: ${city}`,
+      code: 'CITY_NOT_FOUND',
+      available_cities: weatherData.getCities()
+    });
+  }
+  
+  res.json({
+    city: city,
+    period: selectedPeriod,
+    suggestions: suggestions
+  });
 }
 
 function getRiskAssessment(req, res) {

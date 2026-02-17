@@ -41,26 +41,6 @@ const mockWeatherData = {
       { date: '2026-02-21', min_temp_c: 27, max_temp_c: 34, condition: 'Sunny', rain_probability: 20, uv_index: 9 }
     ]
   },
-  'tokyo': {
-    location: { city: 'Tokyo', country: 'JP' },
-    current: {
-      temperature_c: 8,
-      humidity_percent: 45,
-      condition: 'Cold and Clear',
-      wind_kph: 20,
-      uv_index: 3,
-      rain_probability: 5,
-      air_quality_index: 35,
-      observed_at: new Date().toISOString()
-    },
-    forecast: [
-      { date: '2026-02-17', min_temp_c: 2, max_temp_c: 8, condition: 'Cold and Clear', rain_probability: 5, uv_index: 3 },
-      { date: '2026-02-18', min_temp_c: 3, max_temp_c: 10, condition: 'Partly Cloudy', rain_probability: 15, uv_index: 4 },
-      { date: '2026-02-19', min_temp_c: 4, max_temp_c: 11, condition: 'Sunny', rain_probability: 5, uv_index: 5 },
-      { date: '2026-02-20', min_temp_c: 3, max_temp_c: 9, condition: 'Cloudy', rain_probability: 30, uv_index: 2 },
-      { date: '2026-02-21', min_temp_c: 2, max_temp_c: 7, condition: 'Rainy', rain_probability: 60, uv_index: 1 }
-    ]
-  },
   'calamba': {
     location: { city: 'Calamba', country: 'PH' },
     current: {
@@ -95,6 +75,12 @@ function getCurrentWeather(city) {
         location: data.location,
         temperature_c: data.current.temperature_c,
         humidity_percent: data.current.humidity_percent,
+        condition: data.current.condition,
+        wind_kph: data.current.wind_kph,
+        uv_index: data.current.uv_index,
+        rain_probability: data.current.rain_probability,
+        air_quality_index: data.current.air_quality_index,
+        observed_at: data.current.observed_at
     };
 }
 
@@ -120,8 +106,23 @@ function getCities() {
     }));
 }
 
+function getWeatherForActivities(city, period = 'all-day') {
+  const current = getCurrentWeather(city);
+  if (!current) {
+    return null;
+  }
+  const forecast = getForecast(city, 1);
+  
+  return {
+    current,
+    forecast: forecast.forecast[0],
+    period
+  };
+}
+
 module.exports = {
     getCurrentWeather,
     getForecast,
-    getCities
+    getCities,
+    getWeatherForActivities
 };
