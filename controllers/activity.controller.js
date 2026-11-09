@@ -1,9 +1,10 @@
-const { get } = require('http');
 const activityData = require('../data/activity.data');
 const weatherData = require('../data/weather.data');
 
-function getSuggestions(req, res) {
-  const {city, period} = req.query;
+const validPeriods = ['morning', 'afternoon', 'evening', 'night', 'all-day'];
+
+async function getSuggestions(req, res) {
+  const { city, period } = req.query;
   if (!city || city.trim() === '') {
     return res.status(400).json({
       error: 'Bad Request',
@@ -12,7 +13,6 @@ function getSuggestions(req, res) {
     });
   }
 
-  const validPeriods = ['morning', 'afternoon', 'evening', 'night', 'all-day'];
   const selectedPeriod = period ? period.toLowerCase() : 'all-day';
   if (!validPeriods.includes(selectedPeriod)) {
     return res.status(400).json({
@@ -21,14 +21,16 @@ function getSuggestions(req, res) {
       code: 'INVALID_PERIOD'
     });
   }
-  const suggestions = activityData.getActivitySuggestions(city, selectedPeriod);
-  
+
+  const suggestions = await activityData.getActivitySuggestions(city, selectedPeriod);
+
   if (!suggestions) {
+    const cities = await weatherData.getCities();
     return res.status(404).json({
       error: 'Not Found',
       message: `No activity suggestions found for city: ${city}`,
       code: 'CITY_NOT_FOUND',
-      available_cities: weatherData.getCities()
+      available_cities: cities
     });
   }
 
@@ -39,36 +41,40 @@ function getSuggestions(req, res) {
   });
 }
 
-function getRiskAssessment(req, res) {
-  const {city} = req.query;
+async function getRiskAssessment(req, res) {
+  const { city } = req.query;
+  const cities = await weatherData.getCities();
+
   if (!city || city.trim() === '') {
-    const cities = weatherData.getCities();
-    const citiesWithRisks = cities.map(c => {
-      const weather = weatherData.getWeatherForActivities(c.city);
+    const citiesWithRisks = [];
+    for (const c of cities) {
+      const weather = await weatherData.getWeatherForActivities(c.city);
       const risks = weather ? activityData.detectRisks(weather) : [];
-      return {
+      citiesWithRisks.push({
         city: c.city,
         country: c.country,
         risks: risks
-      };
-    });
-    
+      });
+    }
+
     return res.json({
       cities: {
-        count: citiesWithRisks.length, 
+        count: citiesWithRisks.length,
         list: citiesWithRisks
       }
     });
   }
-  const weather = weatherData.getWeatherForActivities(city);
+
+  const weather = await weatherData.getWeatherForActivities(city);
   if (!weather) {
     return res.status(404).json({
       error: 'Not Found',
       message: `Weather data not found for city: ${city}`,
       code: 'CITY_NOT_FOUND',
-      available_cities: weatherData.getCities()
+      available_cities: cities
     });
   }
+
   const risks = activityData.detectRisks(weather);
   res.json({
     city: city,
@@ -80,4 +86,4 @@ function getRiskAssessment(req, res) {
 module.exports = {
   getSuggestions,
   getRiskAssessment
-}
+};

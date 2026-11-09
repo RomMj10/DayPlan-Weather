@@ -1,7 +1,7 @@
 const weatherData = require('./weather.data');
 
 const ACTIVITY_RECOMMENDATIONS = {
-    outdoors: {
+  outdoors: {
     sunny: ['Morning walk', 'Cycling', 'Outdoor yoga', 'Picnic in the park', 'Hiking'],
     cloudy: ['Jogging', 'Outdoor photography', 'Gardening', 'Walking the dog'],
     rainy: ['Museum visit', 'Covered market shopping', 'Indoor sports complex'],
@@ -26,7 +26,7 @@ const ACTIVITY_RECOMMENDATIONS = {
 };
 
 const RISK_THRESHOLDS = {
-    UV: {
+  UV: {
     MODERATE: { min: 3, max: 5, level: 'MODERATE' },
     HIGH: { min: 6, max: 7, level: 'HIGH' },
     VERY_HIGH: { min: 8, max: 10, level: 'VERY_HIGH' },
@@ -59,11 +59,25 @@ const RISK_THRESHOLDS = {
   }
 };
 
-function detectRisks(weather) {
-    const risks = [];
-    const { temperature_c, uv_index, rain_probability, wind_kph, air_quality_index , condition} = weather.current;
+function getRiskLevel(type, value) {
+  const thresholds = RISK_THRESHOLDS[type];
+  if (!thresholds) return 'LOW';
 
-    if (uv_index >= 8) {
+  for (const key of ['EXTREME', 'VERY_HIGH', 'HIGH', 'MODERATE']) {
+    const threshold = thresholds[key];
+    if (threshold && value >= threshold.min && value <= threshold.max) {
+      return threshold.level;
+    }
+  }
+
+  return 'LOW';
+}
+
+function detectRisks(weather) {
+  const risks = [];
+  const { temperature_c, uv_index, rain_probability, wind_kph, air_quality_index, condition } = weather.current;
+
+  if (uv_index >= 8) {
     risks.push({
       type: 'HIGH_UV',
       level: getRiskLevel('UV', uv_index),
@@ -79,7 +93,7 @@ function detectRisks(weather) {
     });
   }
 
-  if (weather.temperature_c >= 33) {
+  if (temperature_c >= 33) {
     risks.push({
       type: 'HEAT_RISK',
       level: getRiskLevel('HEAT', temperature_c),
@@ -96,6 +110,7 @@ function detectRisks(weather) {
       description: `Temperature is ${temperature_c}°C - risk of cold exposure`
     });
   }
+
   if (condition.toLowerCase().includes('thunderstorm')) {
     risks.push({
       type: 'THUNDERSTORM',
@@ -103,7 +118,7 @@ function detectRisks(weather) {
       value: rain_probability,
       description: 'Thunderstorm conditions - avoid outdoor activities'
     });
-  } else if (rain_probability >= 60) {
+  } else if (rain_probability >= 80) {
     risks.push({
       type: 'HEAVY_RAIN',
       level: getRiskLevel('RAIN', rain_probability),
@@ -119,7 +134,7 @@ function detectRisks(weather) {
     });
   }
 
-  if (wind_kph >= 40) {
+  if (wind_kph >= 60) {
     risks.push({
       type: 'HIGH_WIND',
       level: getRiskLevel('WIND', wind_kph),
@@ -134,7 +149,7 @@ function detectRisks(weather) {
       description: `Wind speed is ${wind_kph} km/h - be cautious with outdoor activities`
     });
   }
-  
+
   if (air_quality_index && air_quality_index >= 100) {
     risks.push({
       type: 'POOR_AIR_QUALITY',
@@ -143,22 +158,8 @@ function detectRisks(weather) {
       description: `Air quality index is ${air_quality_index} - consider limiting outdoor exercise`
     });
   }
-  
-  return risks;
-}
 
-function getRiskLevel(type, value) {
-  const thresholds = RISK_THRESHOLDS[type];
-  if (!thresholds) return 'LOW';
-  
-  for (const key of ['EXTREME', 'VERY_HIGH', 'HIGH', 'MODERATE']) {
-    const threshold = thresholds[key];
-    if (threshold && value >= threshold.min && value <= threshold.max) {
-      return threshold.level;
-    }
-  }
-  
-  return 'LOW';
+  return risks;
 }
 
 function generateWeatherSummary(weather, risks) {
@@ -174,22 +175,23 @@ function generateWeatherSummary(weather, risks) {
   } else {
     parts.push('Cold');
   }
-  
+
   parts.push(`with ${weather.condition.toLowerCase()} conditions`);
-  
-  if (weather.uv_index >= 8) {
+
+  if (weather.uv_index >= 11) {
+    parts.push('and extreme UV');
+  } else if (weather.uv_index >= 8) {
     parts.push('and very high UV');
   } else if (weather.uv_index >= 6) {
     parts.push('and high UV');
   }
-  
-  if (weather.rain_probability >= 60) {
+
+  if (weather.rain_probability >= 80) {
     parts.push(`with ${weather.rain_probability}% chance of rain`);
   }
-  
+
   return parts.join(' ');
 }
-
 
 function generateRecommendations(weather, risks, period) {
   const recommendations = {
@@ -198,17 +200,16 @@ function generateRecommendations(weather, risks, period) {
     avoid: [],
     safety_note: ''
   };
-  
+
   const riskTypes = risks.map(r => r.type);
   const hasHighUV = riskTypes.includes('HIGH_UV');
   const hasHeatRisk = riskTypes.includes('HEAT_RISK');
   const hasThunderstorm = riskTypes.includes('THUNDERSTORM');
-  const hasHeavyRain = riskTypes.includes('HEAVY_RAIN') || riskTypes.includes('RAIN_RISK');
+  const hasHeavyRain = riskTypes.includes('HEAVY_RAIN') || riskTypes.includes('HEAVY_RAIN');
   const hasColdRisk = riskTypes.includes('COLD_RISK');
   const hasHighWind = riskTypes.includes('HIGH_WIND') || riskTypes.includes('MODERATE_WIND');
-  
-  //outdoor recommendations
-  if (hasThunderstorm || hasHeavyRain) {
+
+  if (hasThunderstorm) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.rainy;
   } else if (hasHeatRisk) {
     recommendations.outdoors = ['Early morning walk (before 8 AM)', 'Evening stroll (after 6 PM)', 'Shaded park activities'];
@@ -216,17 +217,16 @@ function generateRecommendations(weather, risks, period) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.cold;
   } else if (hasHighWind) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.windy;
-  } else if (weather.condition.toLowerCase().includes('sunny')) {
-    recommendations.outdoors = hasHighUV 
+  } else if (weather.condition.toLowerCase().includes('sunny') || weather.condition === 'Clear' || weather.condition === 'Mainly Clear') {
+    recommendations.outdoors = hasHighUV
       ? ['Early morning walk', 'Late afternoon gardening', 'Evening outdoor sports']
-      : ACTIVITY_SUGGESTIONS.outdoors.sunny;
+      : ACTIVITY_RECOMMENDATIONS.outdoors.sunny;
   } else if (weather.condition.toLowerCase().includes('cloudy')) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.cloudy;
   } else {
     recommendations.outdoors = ['Walking', 'Light outdoor activities', 'Photography'];
   }
-  
-  //indoor recommendations
+
   if (hasHeatRisk) {
     recommendations.indoors = [...ACTIVITY_RECOMMENDATIONS.indoors.hot, ...ACTIVITY_RECOMMENDATIONS.indoors.general.slice(0, 3)];
   } else if (hasColdRisk) {
@@ -236,8 +236,7 @@ function generateRecommendations(weather, risks, period) {
   } else {
     recommendations.indoors = ACTIVITY_RECOMMENDATIONS.indoors.general;
   }
-  
-  //activities to avoid
+
   if (hasHighUV) {
     recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.high_uv);
   }
@@ -256,20 +255,20 @@ function generateRecommendations(weather, risks, period) {
   if (hasHighWind) {
     recommendations.avoid.push(...ACTIVITY_RECOMMENDATIONS.avoid.high_wind);
   }
-  
-  
+
   recommendations.outdoors = recommendations.outdoors.slice(0, 5);
   recommendations.indoors = recommendations.indoors.slice(0, 5);
   recommendations.avoid = recommendations.avoid.slice(0, 4);
-  
+
   recommendations.safety_note = generateSafetyNote(weather, risks, period);
-  
+
   return recommendations;
 }
+
 function generateSafetyNote(weather, risks, period) {
   const notes = [];
   const riskTypes = risks.map(r => r.type);
-  
+
   if (riskTypes.includes('HIGH_UV')) {
     const uvRisk = risks.find(r => r.type === 'HIGH_UV');
     if (uvRisk.level === 'EXTREME' || uvRisk.level === 'VERY_HIGH') {
@@ -278,53 +277,53 @@ function generateSafetyNote(weather, risks, period) {
       notes.push('Apply sunscreen (SPF 30+) and wear a hat for outdoor activities.');
     }
   }
-  
+
   if (riskTypes.includes('HEAT_RISK')) {
     notes.push('Stay hydrated by drinking water frequently. Take breaks in shaded or air-conditioned areas. Watch for signs of heat exhaustion.');
   }
-  
+
   if (riskTypes.includes('THUNDERSTORM')) {
     notes.push('Stay indoors and avoid windows. Unplug electronic devices. Avoid water and metal objects.');
   }
-  
+
   if (riskTypes.includes('HEAVY_RAIN') || riskTypes.includes('RAIN_RISK')) {
     notes.push('Carry an umbrella or raincoat. Avoid low-lying areas prone to flooding.');
   }
-  
+
   if (riskTypes.includes('COLD_RISK')) {
     notes.push('Dress in layers and cover exposed skin. Limit time outdoors and stay dry.');
   }
-  
+
   if (riskTypes.includes('HIGH_WIND')) {
     notes.push('Secure loose objects. Be cautious of falling branches. Avoid elevated areas.');
   }
-  
+
   if (riskTypes.includes('POOR_AIR_QUALITY')) {
     notes.push('Consider wearing a mask outdoors. Limit strenuous outdoor exercise, especially if you have respiratory conditions.');
   }
-  
+
   if (notes.length === 0) {
     notes.push('Weather conditions are favorable for most activities. Stay aware of any changes.');
   }
-  
+
   return notes.join(' ');
 }
 
-function getActivitySuggestions(city, period = 'all-day') {
-  const weatherSuggest = weatherData.getWeatherForActivities(city, period);
-  
-  if (!weatherSuggest) {
+async function getActivitySuggestions(city, period = 'all-day') {
+  const weatherWrapper = await weatherData.getWeatherForActivities(city, period);
+
+  if (!weatherWrapper) {
     return null;
   }
-  
-  const { current, forecast } = weatherSuggest;
-  
-  const risks = detectRisks(current);
-  
+
+  const { current, forecast } = weatherWrapper;
+
+  const risks = detectRisks(weatherWrapper);
+
   const weatherSummary = generateWeatherSummary(current, risks);
-  
+
   const recommendations = generateRecommendations(current, risks, period);
-  
+
   return {
     location: current.location,
     weather_summary: weatherSummary,

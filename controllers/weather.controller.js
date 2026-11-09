@@ -1,5 +1,7 @@
 const weatherData = require('../data/weather.data');
-function getCurrentWeather(req, res) {
+const activityData = require('../data/activity.data');
+
+async function getCurrentWeather(req, res) {
   const { city } = req.query;
   if (!city || city.trim() === '') {
     return res.status(400).json({
@@ -9,19 +11,21 @@ function getCurrentWeather(req, res) {
     });
   }
 
-  const weather = weatherData.getCurrentWeather(city);
-  
+  const weather = await weatherData.getCurrentWeather(city);
+
   if (!weather) {
+    const cities = await weatherData.getCities();
     return res.status(404).json({
       error: 'Not Found',
       message: `Weather data not found for city: ${city}`,
       code: 'CITY_NOT_FOUND',
-      available_cities: weatherData.getCities()
+      available_cities: cities
     });
   }
   res.status(200).json(weather);
 }
-function getForecast(req, res) {
+
+async function getForecast(req, res) {
   const { city, days } = req.query;
   if (!city || city.trim() === '') {
     return res.status(400).json({
@@ -30,8 +34,8 @@ function getForecast(req, res) {
       code: 'MISSING_CITY'
     });
   }
-  const numDays = days ? parseInt(days) : 3;
-  const forecast = weatherData.getForecast(city, numDays);
+
+  const numDays = parseInt(days) || 3;
   if (isNaN(numDays) || numDays < 1 || numDays > 7) {
     return res.status(400).json({
       error: 'Bad Request',
@@ -40,10 +44,22 @@ function getForecast(req, res) {
     });
   }
 
+  const forecast = await weatherData.getForecast(city, numDays);
+  if (!forecast) {
+    const cities = await weatherData.getCities();
+    return res.status(404).json({
+      error: 'Not Found',
+      message: `Weather data not found for city: ${city}`,
+      code: 'CITY_NOT_FOUND',
+      available_cities: cities
+    });
+  }
+
   res.status(200).json(forecast);
 }
-function getCities(req, res) {
-  const cities = weatherData.getCities();
+
+async function getCities(req, res) {
+  const cities = await weatherData.getCities();
   res.status(200).json(cities);
 }
 

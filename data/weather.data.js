@@ -1,5 +1,7 @@
+const weatherService = require('../services/weather.service');
+
 const mockWeatherData = {
-    'cebu': {
+  'cebu': {
     location: { city: 'Cebu', country: 'PH' },
     current: {
       temperature_c: 34,
@@ -63,66 +65,126 @@ const mockWeatherData = {
   }
 };
 
-function getCurrentWeather(city) {
-    const cityKey = city.toLowerCase().trim();
-    const data = mockWeatherData[cityKey];
+async function getCurrentWeather(city) {
+  const cityKey = city.toLowerCase().trim();
+  const mock = mockWeatherData[cityKey];
+  if (!mock) return null;
 
-    if (!data) {
-        return null;
-    }
-
+  try {
+    const live = await weatherService.getWeatherByCity(city);
     return {
-        location: data.location,
-        temperature_c: data.current.temperature_c,
-        humidity_percent: data.current.humidity_percent,
-        condition: data.current.condition,
-        wind_kph: data.current.wind_kph,
-        uv_index: data.current.uv_index,
-        rain_probability: data.current.rain_probability,
-        air_quality_index: data.current.air_quality_index,
-        observed_at: data.current.observed_at
+      location: live.location,
+      temperature_c: live.current.temperature_c,
+      humidity_percent: live.current.humidity_percent,
+      condition: live.current.condition,
+      wind_kph: live.current.wind_kph,
+      uv_index: live.current.uv_index,
+      rain_probability: live.current.rain_probability,
+      air_quality_index: live.current.air_quality_index,
+      observed_at: live.current.observed_at
     };
-}
-
-function getForecast(city, days = 3) {
-    const cityKey = city.toLowerCase().trim();
-    const data = mockWeatherData[cityKey];
-
-    if (!data) {
-        return null;
-    }
-
-    const limitedDays = Math.min(Math.max(1, days), 7);
+  } catch (error) {
     return {
-        location: data.location,
-        forecast: data.forecast.slice(0, limitedDays)
+      location: mock.location,
+      temperature_c: mock.current.temperature_c,
+      humidity_percent: mock.current.humidity_percent,
+      condition: mock.current.condition,
+      wind_kph: mock.current.wind_kph,
+      uv_index: mock.current.uv_index,
+      rain_probability: mock.current.rain_probability,
+      air_quality_index: mock.current.air_quality_index,
+      observed_at: new Date().toISOString()
     };
-}
-
-function getCities() {
-    return Object.keys(mockWeatherData).map(key => ({
-        city: mockWeatherData[key].location.city,
-        country: mockWeatherData[key].location.country
-    }));
-}
-
-function getWeatherForActivities(city, period = 'all-day') {
-  const current = getCurrentWeather(city);
-  if (!current) {
-    return null;
   }
-  const forecast = getForecast(city, 1);
-  
-  return {
-    current,
-    forecast: forecast.forecast[0],
-    period
-  };
+}
+
+async function getForecast(city, days = 3) {
+  const numDays = Math.min(Math.max(1, parseInt(days) || 3), 7);
+  const cityKey = city.toLowerCase().trim();
+  const mock = mockWeatherData[cityKey];
+  if (!mock) return null;
+
+  try {
+    const live = await weatherService.getWeatherByCity(city);
+    return {
+      location: live.location,
+      forecast: live.forecast.slice(0, numDays)
+    };
+  } catch (error) {
+    return {
+      location: mock.location,
+      forecast: mock.forecast.slice(0, numDays)
+    };
+  }
+}
+
+async function getCities() {
+  try {
+    const live = await weatherService.getWeatherByCity('Cebu');
+    return [{ city: live.location.city, country: live.location.country }];
+  } catch (error) {
+    return Object.keys(mockWeatherData).map(key => ({
+      city: mockWeatherData[key].location.city,
+      country: mockWeatherData[key].location.country
+    }));
+  }
+}
+
+async function getWeatherForActivities(city, period = 'all-day') {
+  const cityKey = city.toLowerCase().trim();
+  const mock = mockWeatherData[cityKey];
+  if (!mock) return null;
+
+  try {
+    const live = await weatherService.getWeatherByCity(city);
+    const current = {
+      location: live.location,
+      temperature_c: live.current.temperature_c,
+      humidity_percent: live.current.humidity_percent,
+      condition: live.current.condition,
+      wind_kph: live.current.wind_kph,
+      uv_index: live.current.uv_index,
+      rain_probability: live.current.rain_probability,
+      air_quality_index: live.current.air_quality_index,
+      observed_at: live.current.observed_at
+    };
+    const forecast = {
+      date: live.forecast[0]?.date || new Date().toISOString().split('T')[0],
+      min_temp_c: live.forecast[0]?.min_temp_c || 15,
+      max_temp_c: live.forecast[0]?.max_temp_c || 25,
+      condition: live.forecast[0]?.condition || 'Cloudy',
+      rain_probability: live.forecast[0]?.rain_probability || 0,
+      uv_index: live.forecast[0]?.uv_index || 5
+    };
+
+    return {
+      current,
+      forecast,
+      period
+    };
+  } catch (error) {
+    const current = {
+      location: mock.location,
+      temperature_c: mock.current.temperature_c,
+      humidity_percent: mock.current.humidity_percent,
+      condition: mock.current.condition,
+      wind_kph: mock.current.wind_kph,
+      uv_index: mock.current.uv_index,
+      rain_probability: mock.current.rain_probability,
+      air_quality_index: mock.current.air_quality_index,
+      observed_at: new Date().toISOString()
+    };
+    return {
+      current,
+      forecast: mock.forecast[0],
+      period
+    };
+  }
 }
 
 module.exports = {
-    getCurrentWeather,
-    getForecast,
-    getCities,
-    getWeatherForActivities
+  getCurrentWeather,
+  getForecast,
+  getCities,
+  getWeatherForActivities
 };
