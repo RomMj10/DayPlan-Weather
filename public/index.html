@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayPlan Weather</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- Mobile Header -->
+    <header class="mobile-header" id="mobile-header">
+      <button class="menu-btn" id="menu-btn" aria-label="Toggle cities">
+        <span></span><span></span><span></span>
+      </button>
+      <h1 class="mobile-title">DayPlan Weather</h1>
+    </header>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Weather</h2>
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="city-search" placeholder="Search city..." autocomplete="off">
+        </div>
+      </div>
+      <div class="sidebar-list" id="city-list"></div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+      <div class="placeholder-msg" id="placeholder">
+        <div class="placeholder-icon">&#127780;&#65039;</div>
+        <div class="placeholder-text">Select a city to view weather</div>
+      </div>
+
+      <div id="weather-content" class="weather-content hidden">
+        <!-- Hero -->
+        <section class="hero" id="hero"></section>
+
+        <!-- Hourly Forecast -->
+        <section class="glass-card hourly-card" id="hourly-section">
+          <div class="card-label">HOURLY FORECAST</div>
+          <div class="hourly-scroll" id="hourly-scroll"></div>
+        </section>
+
+        <!-- Widgets Grid — flat 4-column layout -->
+        <div class="widgets-grid">
+          <section class="glass-card forecast-card" id="forecast-section">
+            <div class="card-label">5-DAY FORECAST</div>
+            <div id="forecast-list"></div>
+          </section>
+          <section class="glass-card detail-card" id="sunrise-card"></section>
+          <section class="glass-card detail-card" id="humidity-card"></section>
+          <section class="glass-card detail-card" id="wind-card"></section>
+          <section class="glass-card detail-card" id="feels-card"></section>
+          <section class="glass-card detail-card" id="visibility-card"></section>
+          <section class="glass-card detail-card" id="pressure-card"></section>
+          <section class="glass-card detail-card" id="aqi-card"></section>
+          <section class="glass-card detail-card" id="rain-card"></section>
+        </div>
+
+        <!-- Activities -->
+        <section class="glass-card activities-card" id="activities-section">
+          <div class="card-label">ACTIVITY SUGGESTIONS</div>
+          <div id="activity-details"></div>
+        </section>
+
+        <!-- Risks -->
+        <section class="glass-card risks-card" id="risks-section">
+          <div class="card-label">RISK ASSESSMENT</div>
+          <div id="risk-details"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

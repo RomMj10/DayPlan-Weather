@@ -4,7 +4,7 @@ const weatherData = require('../data/weather.data');
 const validPeriods = ['morning', 'afternoon', 'evening', 'night', 'all-day'];
 
 async function getSuggestions(req, res) {
-  const { city, period } = req.query;
+  const {city, period} = req.query;
   if (!city || city.trim() === '') {
     return res.status(400).json({
       error: 'Bad Request',
@@ -34,11 +34,29 @@ async function getSuggestions(req, res) {
     });
   }
 
-  res.json({
-    city: city,
-    period: selectedPeriod,
-    suggestions: suggestions
-  });
+  try {
+    const suggestions = await activityData.getActivitySuggestions(city, selectedPeriod);
+
+    if (!suggestions) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `No activity suggestions found for city: ${city}`,
+        code: 'CITY_NOT_FOUND',
+        available_cities: weatherData.getCities()
+      });
+    }
+
+    res.json({
+      city: city,
+      period: selectedPeriod,
+      suggestions: suggestions
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch activity suggestions'
+    });
+  }
 }
 
 async function getRiskAssessment(req, res) {
@@ -81,9 +99,55 @@ async function getRiskAssessment(req, res) {
     country: weather.current.location.country,
     risks: risks
   });
+async function getRiskAssessment(req, res) {
+  const {city} = req.query;
+
+  try {
+    if (!city || city.trim() === '') {
+      const cities = weatherData.getCities();
+      const citiesWithRisks = await Promise.all(cities.map(async (c) => {
+        const weather = await weatherData.getWeatherForActivities(c.city);
+        const risks = weather ? activityData.detectRisks(weather) : [];
+        return {
+          city: c.city,
+          country: c.country,
+          risks: risks
+        };
+      }));
+
+      return res.json({
+        cities: {
+          count: citiesWithRisks.length,
+          list: citiesWithRisks
+        }
+      });
+    }
+
+    const weather = await weatherData.getWeatherForActivities(city);
+    if (!weather) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Weather data not found for city: ${city}`,
+        code: 'CITY_NOT_FOUND',
+        available_cities: weatherData.getCities()
+      });
+    }
+    const risks = activityData.detectRisks(weather);
+    res.json({
+      city: city,
+      country: weather.current.location.country,
+      risks: risks
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch risk assessment'
+    });
+  }
 }
 
 module.exports = {
   getSuggestions,
   getRiskAssessment
 };
+}

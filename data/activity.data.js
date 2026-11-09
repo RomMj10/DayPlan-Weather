@@ -7,13 +7,15 @@ const ACTIVITY_RECOMMENDATIONS = {
     rainy: ['Museum visit', 'Covered market shopping', 'Indoor sports complex'],
     hot: ['Early morning swim', 'Beach activities (with sun protection)', 'Water sports'],
     cold: ['Winter hiking', 'Ice skating', 'Skiing', 'Snow activities'],
-    windy: ['Kite flying', 'Windsurfing', 'Sailing']
+    windy: ['Kite flying', 'Windsurfing', 'Sailing'],
+    night: ['Evening walk', 'Night market visit', 'Stargazing', 'Night jogging', 'Outdoor dining']
   },
   indoors: {
     general: ['Yoga', 'Gym workout', 'Reading', 'Cooking class', 'Movie marathon', 'Board games'],
     hot: ['Indoor swimming', 'Mall walking', 'Indoor rock climbing', 'Spa day'],
     cold: ['Indoor heated pool', 'Sauna', 'Hot yoga', 'Indoor sports'],
-    rainy: ['Museum tours', 'Art gallery visits', 'Indoor shopping', 'Café hopping']
+    rainy: ['Museum tours', 'Art gallery visits', 'Indoor shopping', 'Cafe hopping'],
+    night: ['Movie marathon', 'Board games', 'Reading', 'Cooking at home', 'Yoga']
   },
   avoid: {
     high_uv: ['Midday jogging', 'Sunbathing', 'Outdoor sports during peak hours'],
@@ -193,6 +195,13 @@ function generateWeatherSummary(weather, risks) {
   return parts.join(' ');
 }
 
+
+function isNightTime(weather) {
+  if (!weather.sunrise || !weather.sunset) return false;
+  const nowUtc = Math.floor(Date.now() / 1000);
+  return nowUtc < weather.sunrise || nowUtc > weather.sunset;
+}
+
 function generateRecommendations(weather, risks, period) {
   const recommendations = {
     outdoors: [],
@@ -201,6 +210,7 @@ function generateRecommendations(weather, risks, period) {
     safety_note: ''
   };
 
+  const night = isNightTime(weather);
   const riskTypes = risks.map(r => r.type);
   const hasHighUV = riskTypes.includes('HIGH_UV');
   const hasHeatRisk = riskTypes.includes('HEAT_RISK');
@@ -209,15 +219,18 @@ function generateRecommendations(weather, risks, period) {
   const hasColdRisk = riskTypes.includes('COLD_RISK');
   const hasHighWind = riskTypes.includes('HIGH_WIND') || riskTypes.includes('MODERATE_WIND');
 
-  if (hasThunderstorm) {
+  //outdoor recommendations
+  if (hasThunderstorm || hasHeavyRain) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.rainy;
+  } else if (night) {
+    recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.night;
   } else if (hasHeatRisk) {
     recommendations.outdoors = ['Early morning walk (before 8 AM)', 'Evening stroll (after 6 PM)', 'Shaded park activities'];
   } else if (hasColdRisk) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.cold;
   } else if (hasHighWind) {
     recommendations.outdoors = ACTIVITY_RECOMMENDATIONS.outdoors.windy;
-  } else if (weather.condition.toLowerCase().includes('sunny') || weather.condition === 'Clear' || weather.condition === 'Mainly Clear') {
+  } else if (weather.condition.toLowerCase().includes('sunny')) {
     recommendations.outdoors = hasHighUV
       ? ['Early morning walk', 'Late afternoon gardening', 'Evening outdoor sports']
       : ACTIVITY_RECOMMENDATIONS.outdoors.sunny;
@@ -227,7 +240,10 @@ function generateRecommendations(weather, risks, period) {
     recommendations.outdoors = ['Walking', 'Light outdoor activities', 'Photography'];
   }
 
-  if (hasHeatRisk) {
+  //indoor recommendations
+  if (night) {
+    recommendations.indoors = ACTIVITY_RECOMMENDATIONS.indoors.night;
+  } else if (hasHeatRisk) {
     recommendations.indoors = [...ACTIVITY_RECOMMENDATIONS.indoors.hot, ...ACTIVITY_RECOMMENDATIONS.indoors.general.slice(0, 3)];
   } else if (hasColdRisk) {
     recommendations.indoors = [...ACTIVITY_RECOMMENDATIONS.indoors.cold, ...ACTIVITY_RECOMMENDATIONS.indoors.general.slice(0, 3)];
@@ -310,16 +326,16 @@ function generateSafetyNote(weather, risks, period) {
 }
 
 async function getActivitySuggestions(city, period = 'all-day') {
-  const weatherWrapper = await weatherData.getWeatherForActivities(city, period);
-
-  if (!weatherWrapper) {
+  const weatherSuggest = await weatherData.getWeatherForActivities(city, period);
+  
+  if (!weatherSuggest) {
     return null;
   }
-
-  const { current, forecast } = weatherWrapper;
-
-  const risks = detectRisks(weatherWrapper);
-
+  
+  const { current, forecast } = weatherSuggest;
+  
+  const risks = detectRisks(weatherSuggest);
+  
   const weatherSummary = generateWeatherSummary(current, risks);
 
   const recommendations = generateRecommendations(current, risks, period);
