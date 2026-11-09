@@ -1,4 +1,8 @@
+const axios = require('axios');
+
 const CACHE_TTL = parseInt(process.env.CACHE_TTL_MINUTES || '15') * 60 * 1000;
+
+const GEOCODE_HEADERS = { 'User-Agent': 'DayPlan-API/1.0' };
 
 const WMO_WEATHER_CODES = {
   0: 'Clear',
@@ -68,11 +72,9 @@ const geocodeCity = async (city) => {
     limit: '1'
   });
   const url = `${process.env.GEOCODE_API_BASE || 'https://nominatim.openstreetmap.org/search'}?${params}`;
-  const response = await fetch(url, { headers: { 'User-Agent': 'DayPlan-API/1.0' } });
-  if (!response.ok) throw new Error('Geocoding failed');
-  const data = await response.json();
-  if (!data.length) throw new Error('City not found');
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), display_name: data[0].display_name };
+  const response = await axios.get(url, { headers: GEOCODE_HEADERS });
+  if (!response.data.length) throw new Error('City not found');
+  return { lat: parseFloat(response.data[0].lat), lon: parseFloat(response.data[0].lon), display_name: response.data[0].display_name };
 };
 
 const fetchCurrentWeather = async (lat, lon) => {
@@ -80,10 +82,9 @@ const fetchCurrentWeather = async (lat, lon) => {
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,uv_index,cloud_cover,precipitation_probability,air_quality_us_aqi&timezone=auto`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Weather fetch failed');
-  const data = await response.json();
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,uv_index,precipitation_probability&timezone=auto`;
+  const response = await axios.get(url);
+  const data = response.data;
 
   const weatherCode = data.current?.weather_code ?? 3;
   const condition = codeToCondition(weatherCode);
@@ -95,7 +96,7 @@ const fetchCurrentWeather = async (lat, lon) => {
     wind_kph: Math.round((data.current?.wind_speed_10m ?? 10) * 3.6),
     uv_index: data.current?.uv_index ?? 5,
     rain_probability: data.current?.precipitation_probability ?? 0,
-    air_quality_index: data.current?.air_quality_us_aqi ?? 50,
+    air_quality_index: 50,
     observed_at: new Date().toISOString()
   };
 
@@ -110,9 +111,8 @@ const fetchForecast = async (lat, lon, days = 7) => {
   if (cached) return cached;
 
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_min,temperature_2m_max,weather_code,precipitation_probability_max,uv_index_max&forecast_days=${maxDays}&timezone=auto`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Forecast fetch failed');
-  const data = await response.json();
+  const response = await axios.get(url);
+  const data = response.data;
 
   const daily = data.daily;
   const forecast = [];
