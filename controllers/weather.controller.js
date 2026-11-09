@@ -1,5 +1,4 @@
 const weatherData = require('../data/weather.data');
-const activityData = require('../data/activity.data');
 
 async function getCurrentWeather(req, res) {
   const { city } = req.query;
@@ -11,37 +10,23 @@ async function getCurrentWeather(req, res) {
     });
   }
 
-  const weather = await weatherData.getCurrentWeather(city);
-
-  if (!weather) {
-    const cities = await weatherData.getCities();
-    return res.status(404).json({
-      error: 'Not Found',
-      message: `Weather data not found for city: ${city}`,
-      code: 'CITY_NOT_FOUND',
-      available_cities: cities
-    });
-  }
-  res.status(200).json(weather);
-}
-
-async function getForecast(req, res) {
   try {
     const weather = await weatherData.getCurrentWeather(city);
 
     if (!weather) {
+      const cities = await weatherData.getCities();
       return res.status(404).json({
         error: 'Not Found',
         message: `Weather data not found for city: ${city}`,
         code: 'CITY_NOT_FOUND',
-        available_cities: weatherData.getCities()
+        available_cities: cities
       });
     }
     res.status(200).json(weather);
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Internal Server Error',
-      message: 'Failed to fetch weather data'
+      message: 'Failed to fetch current weather'
     });
   }
 }
@@ -56,7 +41,7 @@ async function getForecast(req, res) {
     });
   }
 
-  const numDays = days ? parseInt(days) : 3;
+  const numDays = parseInt(days) || 3;
   if (isNaN(numDays) || numDays < 1 || numDays > 7) {
     return res.status(400).json({
       error: 'Bad Request',
@@ -65,42 +50,38 @@ async function getForecast(req, res) {
     });
   }
 
-  const forecast = await weatherData.getForecast(city, numDays);
-  if (!forecast) {
-    const cities = await weatherData.getCities();
-    return res.status(404).json({
-      error: 'Not Found',
-      message: `Weather data not found for city: ${city}`,
-      code: 'CITY_NOT_FOUND',
-      available_cities: cities
-    });
-  }
-
-  res.status(200).json(forecast);
-}
-
-async function getCities(req, res) {
-  const cities = await weatherData.getCities();
   try {
     const forecast = await weatherData.getForecast(city, numDays);
 
     if (!forecast) {
+      const cities = await weatherData.getCities();
       return res.status(404).json({
         error: 'Not Found',
         message: `Weather data not found for city: ${city}`,
         code: 'CITY_NOT_FOUND',
-        available_cities: weatherData.getCities()
+        available_cities: cities
       });
     }
     res.status(200).json(forecast);
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch forecast data'
     });
   }
 }
 
+async function getCities(req, res) {
+  try {
+    const cities = await weatherData.getCities();
+    res.status(200).json(cities);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch cities'
+    });
+  }
+}
 
 module.exports = {
   getCurrentWeather,

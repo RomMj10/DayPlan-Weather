@@ -4,7 +4,7 @@ const weatherData = require('../data/weather.data');
 const validPeriods = ['morning', 'afternoon', 'evening', 'night', 'all-day'];
 
 async function getSuggestions(req, res) {
-  const {city, period} = req.query;
+  const { city, period } = req.query;
   if (!city || city.trim() === '') {
     return res.status(400).json({
       error: 'Bad Request',
@@ -22,27 +22,16 @@ async function getSuggestions(req, res) {
     });
   }
 
-  const suggestions = await activityData.getActivitySuggestions(city, selectedPeriod);
-
-  if (!suggestions) {
-    const cities = await weatherData.getCities();
-    return res.status(404).json({
-      error: 'Not Found',
-      message: `No activity suggestions found for city: ${city}`,
-      code: 'CITY_NOT_FOUND',
-      available_cities: cities
-    });
-  }
-
   try {
     const suggestions = await activityData.getActivitySuggestions(city, selectedPeriod);
 
     if (!suggestions) {
+      const cities = await weatherData.getCities();
       return res.status(404).json({
         error: 'Not Found',
         message: `No activity suggestions found for city: ${city}`,
         code: 'CITY_NOT_FOUND',
-        available_cities: weatherData.getCities()
+        available_cities: cities
       });
     }
 
@@ -61,59 +50,21 @@ async function getSuggestions(req, res) {
 
 async function getRiskAssessment(req, res) {
   const { city } = req.query;
-  const cities = await weatherData.getCities();
-
-  if (!city || city.trim() === '') {
-    const citiesWithRisks = [];
-    for (const c of cities) {
-      const weather = await weatherData.getWeatherForActivities(c.city);
-      const risks = weather ? activityData.detectRisks(weather) : [];
-      citiesWithRisks.push({
-        city: c.city,
-        country: c.country,
-        risks: risks
-      });
-    }
-
-    return res.json({
-      cities: {
-        count: citiesWithRisks.length,
-        list: citiesWithRisks
-      }
-    });
-  }
-
-  const weather = await weatherData.getWeatherForActivities(city);
-  if (!weather) {
-    return res.status(404).json({
-      error: 'Not Found',
-      message: `Weather data not found for city: ${city}`,
-      code: 'CITY_NOT_FOUND',
-      available_cities: cities
-    });
-  }
-
-  const risks = activityData.detectRisks(weather);
-  res.json({
-    city: city,
-    country: weather.current.location.country,
-    risks: risks
-  });
-async function getRiskAssessment(req, res) {
-  const {city} = req.query;
 
   try {
+    const cities = await weatherData.getCities();
+
     if (!city || city.trim() === '') {
-      const cities = weatherData.getCities();
-      const citiesWithRisks = await Promise.all(cities.map(async (c) => {
+      const citiesWithRisks = [];
+      for (const c of cities) {
         const weather = await weatherData.getWeatherForActivities(c.city);
         const risks = weather ? activityData.detectRisks(weather) : [];
-        return {
+        citiesWithRisks.push({
           city: c.city,
           country: c.country,
           risks: risks
-        };
-      }));
+        });
+      }
 
       return res.json({
         cities: {
@@ -129,9 +80,10 @@ async function getRiskAssessment(req, res) {
         error: 'Not Found',
         message: `Weather data not found for city: ${city}`,
         code: 'CITY_NOT_FOUND',
-        available_cities: weatherData.getCities()
+        available_cities: cities
       });
     }
+
     const risks = activityData.detectRisks(weather);
     res.json({
       city: city,
@@ -150,4 +102,3 @@ module.exports = {
   getSuggestions,
   getRiskAssessment
 };
-}
